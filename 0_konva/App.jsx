@@ -70,18 +70,18 @@ const KonvaImg = (props) => {
             items.map(({src, x, y}, i) => {
               return (
               <Fragment key={src}>
-                <KonvaImg
-                  name={src}
-                  src={src}
-                  shadowOffset={{x: 5, y: 5}}
-                  shadowOpacity={0.2}
-                  x={x}
-                  y={y}
-                  draggable={true}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                />
-              </Fragment>
+                  <KonvaImg
+                    name={src}
+                    src={src}
+                    shadowOffset={{x: 5, y: 5}}
+                    shadowOpacity={0.2}
+                    x={x}
+                    y={y}
+                    draggable={true}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                  />
+                </Fragment>
               )
             })
           }
