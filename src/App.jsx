@@ -1,94 +1,119 @@
-import React, { Fragment, useRef, useState } from 'react';
-import { Stage, Layer, Image } from 'react-konva';
-import { getImgURL } from './utils/helper.ts';
-import styles from "./index.module.css"
+import React from 'react';
+import { Stage, Layer, Rect, Transformer } from 'react-konva';
 
-const KonvaImg = (props) => {
-  const [show , setShow] = useState(false);
-  const img = new window.Image(370, 600);
-  img.crossOrigin = 'Anonymous';
-  img.src = getImgURL(props.src);
-  img.addEventListener("load", () => setShow(true));
-  return (
-    show ? 
-    <Image
-      image={img}
-      stroke="#fff"
-      strokeWidth={0}
-      {...props}
-    /> 
-    : <></>
-    )
-  }
-  
-  const App = () => {
-    const stageRef = useRef(null);
-    const [items, setItems] = useState([
-    {
-      src:"616661a885e6f1030718959c",
-      x: 300,
-      y: 100,
-    }, {
-      src: "616661a885e6f103071895a9",
-      x: 200,
-      y: 100,
-    }, {
-      src: "616661a985e6f103071895b6",
-      x: 100,
-      y: 100,
+const Rectangle = ({ shapeProps, isSelected, onSelect, onChange }) => {
+  const shapeRef = React.useRef();
+  const trRef = React.useRef();
+
+  React.useEffect(() => {
+    if (isSelected) {
+      trRef.current.nodes([shapeRef.current]);
+      trRef.current.getLayer().batchDraw();
     }
-  ]);
-  const generateImg = () => {
-    const uri = stageRef.current.toDataURL();
-    console.log(uri);
-  }
-  const handleDragStart = (e) => {
-    const src = e.target.name();
-    const newItems = items.slice();
-    const idx = items.findIndex(item => item.src === src);
-    const item = newItems.splice(idx, 1)[0];
-    newItems.push(item);
-    setItems(newItems);
-  };
-  const handleDragEnd = (e) => {
-    const src = e.target.name();
-    const newItems = items.slice();
-    const index = newItems.findIndex(item => item.src === src);
-    newItems[index] = {
-      src,
-      x: e.target.x(),
-      y: e.target.y(),
-    };
-    setItems(newItems);
-  }
-  return (
-    <>
-      <button onClick={generateImg}>生成</button>
-      <Stage width={window.innerWidth} height={window.innerHeight} ref={stageRef} className={styles["stage"]}>
-        <Layer>
-          {
-            items.map(({src, x, y}, i) => {
-              return (
-              <Fragment key={src}>
-                <KonvaImg
-                  name={src}
-                  src={src}
-                  shadowOffset={{x: 5, y: 5}}
-                  shadowOpacity={0.2}
-                  x={x}
-                  y={y}
-                  draggable={true}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                />
-              </Fragment>
-              )
-            })
-          }
-        </Layer>
-      </Stage>
-    </>
-  );
-}
+  }, [isSelected]);
 
+  return (
+    <React.Fragment>
+      <Rect
+        onClick={onSelect}
+        onTap={onSelect}
+        ref={shapeRef}
+        {...shapeProps}
+        draggable
+        onDragEnd={(e) => {
+          onChange({
+            ...shapeProps,
+            x: e.target.x(),
+            y: e.target.y(),
+          });
+        }}
+        onTransformEnd={(e) => {
+          const node = shapeRef.current;
+          const scaleX = node.scaleX();
+          const scaleY = node.scaleY();
+          node.scaleX(1);
+          node.scaleY(1);
+          onChange({
+            ...shapeProps,
+            x: node.x(),
+            y: node.y(),
+            width: Math.max(5, node.width() * scaleX),
+            height: Math.max(node.height() * scaleY),
+          });
+        }}
+      />
+      {isSelected && (
+        <Transformer
+          ref={trRef}
+          boundBoxFunc={(oldBox, newBox) => {
+            if (newBox.width < 5 || newBox.height < 5) {
+              return oldBox;
+            }
+            return newBox;
+          }}
+        />
+      )}
+    </React.Fragment>
+  );
+};
+
+const initialRectangles = [
+  {
+    x: 10,
+    y: 10,
+    width: 100,
+    height: 100,
+    fill: 'red',
+    id: 'rect1',
+  },
+  {
+    x: 150,
+    y: 150,
+    width: 100,
+    height: 100,
+    fill: 'green',
+    id: 'rect2',
+  },
+];
+
+const App = () => {
+  const [rectangles, setRectangles] = React.useState(initialRectangles);
+  const [selectedId, selectShape] = React.useState(null);
+
+  const checkDeselect = (e) => {
+    const clickedOnEmpty = e.target === e.target.getStage();
+    if (clickedOnEmpty) {
+      selectShape(null);
+    }
+  };
+
+  return (
+    <Stage
+      width={window.innerWidth}
+      height={window.innerHeight}
+      onMouseDown={checkDeselect}
+      onTouchStart={checkDeselect}
+    >
+      <Layer>
+        {rectangles.map((rect, i) => {
+          return (
+            <Rectangle
+              key={i}
+              shapeProps={rect}
+              isSelected={rect.id === selectedId}
+              onSelect={() => {
+                selectShape(rect.id);
+              }}
+              onChange={(newAttrs) => {
+                const rects = rectangles.slice();
+                rects[i] = newAttrs;
+                setRectangles(rects);
+              }}
+            />
+          );
+        })}
+      </Layer>
+    </Stage>
+  );
+};
 export default App;
